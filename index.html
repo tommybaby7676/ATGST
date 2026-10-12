@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>即時數據演算終端｜機台爆率訊號監控</title>
+
+  <!--
+  ==============================================================================
+  📌 【投手專用】黑頁 4（即時試玩 / 偽外掛功能型）量產小抄 (QUICK CHEAT SHEET)
+  ==============================================================================
+  1. 核心定位與受眾：
+     - 廣告端主打「破解算法、外掛信號、看準吐分期、戰神賽特/雷神爆分技巧」。
+     - 吸引玄學派、技巧派、算計型的高淨值老玩家，以科技分析儀表板包裝降低防備心。
+
+  2. 批次量產「日常更換指南」（每次開新案只動這兩處）：
+     - 【區塊 0：主題配色】：修改頂部 <style id="theme-vars">（配合機台風格：賽特紅/雷神青/麻將金）。
+     - 【區塊 A：業務配置】：修改下方 CONFIG 內的目標網址、機台名稱、試玩開關與像素 ID。
+
+  3. 雙模式展示與轉化阻截：
+     - 方案 A（無試玩）：預設顯示「AI 機台週期封包監聽雷達」+ 實時 RTP 跳動 + 爆分播報。
+     - 方案 B（有試玩）：USE_IFRAME_DEMO 設為 true 並填入官方試玩網址，直接嵌入可操作 Demo。
+     - 點擊底部按鈕會跳出「5 分鐘限時高爆訊號阻截彈窗」，再次點擊完成 180ms 延遲轉化。
+
+  4. 追蹤機制（純淨前端）：
+     - 進入頁面發送 PageView。
+     - 停留 5 秒自動觸發 Meta 自訂事件 "Signal_Analyzed"（標記深入研究數據的高意向玩家）。
+     - 點擊彈窗內確認按鈕：發送 CLICK_EVENT_NAME（預設 Lead）+ :active 體感 + 180ms 安全跳轉。
+  ==============================================================================
+  -->
+
+  <!-- ==========================================================================
+       🎨 【區塊 0】全站主題配色設定區（配合機台主題一鍵換色）
+       ========================================================================== -->
+  <style id="theme-vars">
+    :root {
+      /* 【核心螢光主色】：科技青改 #00ffcc | 賽特紅改 #ff3366 | 雷神金改 #ffd700 */
+      --primary: #00ffcc;
+      --primary-glow: rgba(0, 255, 204, 0.4);
+      --alert-red: #ff3366;        /* 高危警示與爆發蓄力槽色彩 */
+      --bg: #06090e;               /* 科技底色 (極深黑藍) */
+      --panel: #0a0f18;            /* 終端面板底色 */
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+  </style>
+
+  <!-- Meta Pixel 底層代碼 (免動) -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+  </script>
+
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      background: #000000;
+      color: var(--primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Courier New", monospace;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--panel);
+      min-height: 100vh;
+      padding-bottom: 95px;
+      position: relative;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+    }
+
+    /* 頂部運算狀態列 */
+    .terminal-header {
+      background: #04060a;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+      margin-right: 6px;
+      animation: pulse-dot 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    /* 核心儀表板區塊 */
+    .dashboard-panel {
+      padding: 16px;
+    }
+
+    .target-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .target-box::before {
+      content: "AI SIGNAL ENGINE";
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.3);
+      letter-spacing: 1px;
+    }
+
+    .game-name {
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 4px;
+      text-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .meter-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meter-card {
+      background: #06090e;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .meter-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .meter-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: 0.5px;
+    }
+
+    .meter-val.fire {
+      color: var(--alert-red);
+      text-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+    }
+
+    /* 訊號進度蓄力槽 */
+    .progress-wrapper {
+      margin-top: 14px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-bar-fill {
+      width: 98.4%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--alert-red));
+      box-shadow: 0 0 10px rgba(255, 51, 102, 0.7);
+      transition: width 0.5s ease;
+    }
+
+    /* 演算視窗 / 試玩螢幕 */
+    .screen-container {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .screen-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .radar-scan {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.85) 80%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .radar-circle {
+      width: 76px;
+      height: 76px;
+      border: 2px dashed var(--primary);
+      border-radius: 50%;
+      animation: rotate-radar 6s linear infinite;
+      margin-bottom: 12px;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    @keyframes rotate-radar {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* 實時爆分中獎播報 (Ticker) */
+    .ticker-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11.5px;
+      color: #e2e8f0;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 底部懸浮操作欄 */
+    .sticky-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: rgba(6, 9, 14, 0.96);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      z-index: 999;
+      box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.9);
+    }
+
+    .cta-cyber {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 52px;
+      background: linear-gradient(90deg, var(--primary) 0%, #00b4d8 100%);
+      color: #06090e;
+      font-size: 16px;
+      font-weight: 900;
+      text-decoration: none;
+      border-radius: 6px;
+      box-shadow: 0 0 20px var(--primary-glow);
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      user-select: none;
+      border: none;
+      transition: transform 0.1s ease;
+      animation: fx-pulse 1.8s ease-in-out infinite;
+    }
+
+    .cta-cyber:active {
+      transform: scale(0.96) !important;
+    }
+
+    @keyframes fx-pulse {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.02); filter: brightness(1.15); }
+    }
+
+    /* 攔截彈窗 (Modal) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 380px;
+      background: #0f172a;
+      border: 2px solid var(--alert-red);
+      border-radius: 12px;
+      padding: 22px 18px;
+      text-align: center;
+      box-shadow: 0 0 35px rgba(255, 51, 102, 0.5);
+      animation: modal-in 0.25s ease-out;
+    }
+
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .modal-body {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .modal-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 48px;
+      background: linear-gradient(90deg, var(--alert-red) 0%, #ff6b35 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+      text-decoration: none;
+      border-radius: 6px;
+      box-shadow: 0 4px 15px rgba(255, 51, 102, 0.5);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease;
+    }
+
+    .modal-btn:active {
+      transform: scale(0.96) !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 頂部運算狀態 -->
+    <header class="terminal-header">
+      <div><span class="status-dot"></span>LIVE SIGNAL MONITORING</div>
+      <div id="clock">00:00:00 UTC+8</div>
+    </header>
+
+    <main class="dashboard-panel">
+      <!-- 監控標的狀態卡 -->
+      <div class="target-box">
+        <div style="font-size: 11px; color: var(--muted); margin-bottom: 2px;">CURRENT TRACKING TARGET</div>
+        <div class="game-name" id="gameTitle">戰神賽特・吐分週期演算</div>
+
+        <div class="meter-grid">
+          <div class="meter-card">
+            <div class="meter-label">即時吐分率 (RTP)</div>
+            <div class="meter-val fire" id="rtpVal">98.6%</div>
+          </div>
+          <div class="meter-card">
+            <div class="meter-label">訊號建議狀態</div>
+            <div class="meter-val" style="color: #ffd700;" id="statusText">極佳 (HOT)</div>
+          </div>
+        </div>
+
+        <div class="progress-wrapper">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--muted);">
+            <span>大獎爆發蓄力槽</span>
+            <span id="powerPercent">98.4%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 演算視窗 / 試玩視窗 -->
+      <div class="screen-container">
+        <!-- 方案 A：偽外掛演算掃描雷達 -->
+        <div class="radar-scan" id="radarBox">
+          <div class="radar-circle"></div>
+          <div style="font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 4px;">
+            AI 機台週期封包監聽中
+          </div>
+          <div style="font-size: 11px; color: var(--muted);">
+            訊號源已鎖定：每 1.2 秒刷新一次隨機數矩陣
+          </div>
+        </div>
+
+        <!-- 方案 B：iFrame 官方真實試玩嵌入 (開關控制) -->
+        <iframe id="gameIframe" src="" style="display: none;"></iframe>
+      </div>
+
+      <!-- 實時全網爆分情報播報 -->
+      <div class="ticker-box">
+        <span style="color: var(--alert-red); font-weight: 900;">🔥 實時爆分</span>
+        <span id="tickerText">玩家 0912***889 於 12 秒前在【戰神賽特】爆出 $128,500！</span>
+      </div>
+
+      <!-- 科技解密保證 -->
+      <div style="font-size: 11px; color: #64748b; line-height: 1.6; padding: 0 4px;">
+        * 本演算訊號基於全球隨機數產生器（RNG）週期性監測回傳，數據僅供投注時機參考。實際出款以各配合平台結算為準。
+      </div>
+    </main>
+
+    <!-- 底部常駐懸浮按鈕 -->
+    <div class="sticky-bar">
+      <button class="cta-cyber" id="mainCtaBtn">
+        🚀 鎖定高爆訊號・實金開轉
+      </button>
+    </div>
+  </div>
+
+  <!-- 強制攔截轉化彈窗 -->
+  <div class="modal-overlay" id="interceptModal">
+    <div class="modal-card">
+      <div class="modal-title">🔥 訊號高峰提示</div>
+      <div class="modal-body">
+        目前機台處於 <strong>【98.8% 超高吐分週期】</strong>！<br>
+        預測剩餘有效時間：<span style="color: var(--alert-red); font-weight: 900;" id="countdownTimer">04:59</span><br>
+        系統已為您鎖定本局專屬加碼紅利，請立即進場！
+      </div>
+      <a href="javascript:void(0);" class="modal-btn" id="modalActionBtn">
+        立即領取體驗金進場
+      </a>
+    </div>
+  </div>
+
+  <script>
+    /*
+    ==============================================================================
+    🎯 【區塊 A】黑頁 4 量產專用：快速配置區
+    ==============================================================================
+    */
+    const CONFIG = {
+      // 1. 【轉換終點】註冊線路（帶代理碼）或官方 LINE 連結
+      TARGET_URL: "https://www.mate369.com/Register?p=JC",
+
+      // 2. 【監控機台標題】
+      GAME_NAME: "戰神賽特・即時爆率演算",
+
+      // 3. 【是否嵌入官方真實試玩 iFrame】
+      USE_IFRAME_DEMO: false,
+      DEMO_IFRAME_URL: "", // 若有外部 demo 網址直接填入，例如 "https://demogamesfree.pragmaticplay.com/..."
+
+      // 4. 【Meta 追蹤配置】(純前端發射)
+      PIXEL_ID: "000000000000000",
+      CLICK_EVENT_NAME: "Lead"
+    };
+
+    /* =========================================================================
+       以下底層邏輯（數據動態跳動、阻截彈窗、純前端 Pixel、180ms 延遲）無須修改
+       ========================================================================= */
+
+    document.getElementById("gameTitle").innerText = CONFIG.GAME_NAME;
+
+    // 1. 試玩 iFrame 載入判斷
+    if (CONFIG.USE_IFRAME_DEMO && CONFIG.DEMO_IFRAME_URL && CONFIG.DEMO_IFRAME_URL.trim() !== "") {
+      document.getElementById("radarBox").style.display = "none";
+      const iframe = document.getElementById("gameIframe");
+      iframe.src = CONFIG.DEMO_IFRAME_URL;
+      iframe.style.display = "block";
+    }
+
+    // 2. Pixel 初始化 (進站發送 PageView)
+    if (CONFIG.PIXEL_ID && CONFIG.PIXEL_ID.trim() !== "") {
+      fbq('init', CONFIG.PIXEL_ID);
+      fbq('track', 'PageView');
+    }
+
+    // 3. 點擊按鈕安全跳轉 (180ms 黃金延遲)
+    function executeJump() {
+      if (window.fbq && CONFIG.PIXEL_ID && CONFIG.PIXEL_ID.trim() !== "") {
+        try {
+          fbq('trackSingle', CONFIG.PIXEL_ID, CONFIG.CLICK_EVENT_NAME);
+        } catch (err) {}
+      }
+
+      setTimeout(() => {
+        window.location.href = CONFIG.TARGET_URL;
+      }, 180);
+    }
+
+    // 4. 彈窗呼起與點擊事件綁定
+    const modal = document.getElementById("interceptModal");
+    document.getElementById("mainCtaBtn").addEventListener("click", function() {
+      modal.style.display = "flex";
+      startCountdown();
+    });
+
+    document.getElementById("modalActionBtn").addEventListener("click", function(e) {
+      e.preventDefault();
+      executeJump();
+    });
+
+    // 5. 停留 5 秒觸發 Signal_Analyzed 自訂事件 (篩選深入閱讀之高意向受眾)
+    let analyzedTracked = false;
+    setTimeout(() => {
+      if (!analyzedTracked && window.fbq && CONFIG.PIXEL_ID && CONFIG.PIXEL_ID.trim() !== "") {
+        analyzedTracked = true;
+        fbq('trackCustom', 'Signal_Analyzed');
+      }
+    }, 5000);
+
+    // 6. 實時數字與時間動態跳動邏輯
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").innerText = now.toTimeString().split(' ')[0] + " UTC+8";
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 動態 RTP 微幅跳動 (97.4% ~ 99.2%)
+    const rtpElem = document.getElementById("rtpVal");
+    const powerElem = document.getElementById("powerPercent");
+    const progressFill = document.getElementById("progressBar");
+
+    setInterval(() => {
+      const randomRtp = (97.4 + Math.random() * 1.8).toFixed(1);
+      rtpElem.innerText = randomRtp + "%";
+      powerElem.innerText = randomRtp + "%";
+      progressFill.style.width = randomRtp + "%";
+    }, 2400);
+
+    // 實時爆分輪播器
+    const fakeNames = ["0912***772", "0933***105", "0981***663", "0920***419", "0975***882"];
+    const fakeAmounts = ["$68,000", "$145,200", "$92,400", "$210,000", "$76,500"];
+    const tickerElem = document.getElementById("tickerText");
+
+    setInterval(() => {
+      const name = fakeNames[Math.floor(Math.random() * fakeNames.length)];
+      const amount = fakeAmounts[Math.floor(Math.random() * fakeAmounts.length)];
+      const sec = Math.floor(Math.random() * 30) + 5;
+      tickerElem.innerText = `玩家 ${name} 於 ${sec} 秒前爆出 ${amount}！`;
+    }, 3800);
+
+    // 彈窗 5 分鐘倒數計時器
+    let countdownTime = 299;
+    let timerStarted = false;
+    function startCountdown() {
+      if (timerStarted) return;
+      timerStarted = true;
+      const timerElem = document.getElementById("countdownTimer");
+      const interval = setInterval(() => {
+        const m = String(Math.floor(countdownTime / 60)).padStart(2, '0');
+        const s = String(countdownTime % 60).padStart(2, '0');
+        timerElem.innerText = `${m}:${s}`;
+        countdownTime--;
+        if (countdownTime < 0) clearInterval(interval);
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
